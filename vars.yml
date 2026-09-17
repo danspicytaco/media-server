@@ -72,31 +72,34 @@ bazarr_server: "http://bazarr:6767"
 # otherwise the firewall will lock you out.
 ssh_port: 22
 
+# Minimum reported seeders for automatic torrent grabs via Prowlarr's Standard profile.
+torrent_minimum_seeders: 10
+
 # qBittorrent WebUI username (defaults to your SSH user)
 qbittorrent_username: "{{ ansible_user }}"
 
 # Compose pull behavior. Use -e compose_pull_policy=always only during deliberate image updates.
 compose_pull_policy: missing
 
-# Pinned image versions and manifest-list digests (verified 2026-07-09). Bump
+# Pinned image versions and manifest-list digests (verified 2026-09-11). Bump
 # tag and digest together with scripts/check-image-updates.py.
-traefik_version: "v3.7.6"
-traefik_digest: "e2c19575dd9ed00f0a6ebc662c0a0c8c8c5df15779100ad7aca14cb5b09d875c"
+traefik_version: "v3.7.13"
+traefik_digest: "f86a2cab1b5c649070c49f883c743dd32d8485a56e3368c5f93b9e91f1e91259"
 jellyfin_version: "10.11.11"
-jellyfin_digest: "b5155c5f415bfdd8f5699d24a13cbc775dc7b29807c0dc2e7b76debd116c1ed9"
-qbittorrent_version: "5.2.2"
-qbittorrent_digest: "f6bc57461a97a9c55962e373fb275283a846065fe14d088818179af2f28a0782"
-radarr_version: "6.2.1"
-radarr_digest: "4b31df0a031b00cc8c4b55cc500beb41b1eed3d29cb4eb15f54c75695a6b41d3"
+jellyfin_digest: "438e44330078e6b1a810fdec9dc0f4773e6595edb137c5eb4417a516da4c7f0e"
+qbittorrent_version: "5.2.3"
+qbittorrent_digest: "8d48fa8c619caadfb103f04efea8747e2a2762d6c7551690919cffb987e61cee"
+radarr_version: "6.3.0"
+radarr_digest: "95ba0801df4d9d1d79d0d9a3849f656542497dab061d91b87ad4f53a71aff3ef"
 sonarr_version: "4.0.19"
-sonarr_digest: "16afe738a50916edc3740744ea7390e7ff6665864bef5778fbebb45d4f356865"
-prowlarr_version: "2.4.0"
-prowlarr_digest: "d26d9710f4b77072dc4eda387d2cfc677bcaab91e5d0ba1b7b02414c2640a832"
-bazarr_version: "1.5.6"
-bazarr_digest: "4e7f614c4e61eab97d240cdafecdfd3439ef94fe1e3be437191c5af114d4369b"
-seerr_version: "v3.3.0"
-seerr_digest: "2892b14e960d946fb91573792505dcba011075638f27104360fd21aa157fa2bc"
-gluetun_version: "v3.41.1"
-gluetun_digest: "2f33c71e5e164fcd51a962cb950134df25155593edf0c3e1201f888d027049b4"
-docker_socket_proxy_version: "0.3.0"
-docker_socket_proxy_digest: "0bec5531d169bbc5b78b3aee763870c6faef0faf4723aef985a1bfeeb9eac2fa"
+sonarr_digest: "4d9df314875e1249ab7d6170c2b9b3dc1d8e6383f168ceb10dc9a5ad9b324739"
+prowlarr_version: "2.5.2"
+prowlarr_digest: "c7502a75b021d964481c129c84590b9cbc40f83aadd4e553f173871bc0deaa3c"
+bazarr_version: "1.6.0"
+bazarr_digest: "84b6f05a7a4194fafe5a0bec062d32f6ae9ea74db33d43d678cb9a3191f31c24"
+seerr_version: "v3.4.1"
+seerr_digest: "f4768de5f616248d723e05891f3345a1402123775d03bf0890dbfedc0831bda1"
+gluetun_version: "v3.41.3"
+gluetun_digest: "fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027"
+docker_socket_proxy_version: "v0.5.0"
+docker_socket_proxy_digest: "1f5038b54f06c3e18422902cf00ba21803d1c97805aae032e5e6673d532d3459"

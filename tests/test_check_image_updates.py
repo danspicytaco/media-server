@@ -1,4 +1,6 @@
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -132,3 +134,36 @@ def test_compare_images_reports_current_when_tag_and_digest_match():
     )
 
     assert rows[0].status == "current"
+
+
+def test_registry_digest_uses_manifest_list_digest(monkeypatch):
+    module = load_module()
+    image = module.StackImage(
+        service="socket-proxy",
+        repository="tecnativa/docker-socket-proxy",
+        version_var="socket_proxy_version",
+        current_tag="v0.5.0",
+    )
+    manifest = {
+        "digest": "sha256:manifest-list",
+        "manifests": [
+            {"digest": "sha256:linux-386", "platform": {"os": "linux", "architecture": "386"}},
+            {"digest": "sha256:linux-amd64", "platform": {"os": "linux", "architecture": "amd64"}},
+        ],
+    }
+
+    def fake_run(command, **kwargs):
+        assert command == [
+            "docker",
+            "buildx",
+            "imagetools",
+            "inspect",
+            "tecnativa/docker-socket-proxy:v0.5.0",
+            "--format",
+            "{{json .Manifest}}",
+        ]
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(manifest), stderr="")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    assert module.registry_digest(image) == "manifest-list"

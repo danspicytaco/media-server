@@ -196,6 +196,14 @@ ssh -L 9696:127.0.0.1:9696 <user>@<ip_address>
 
 Open `http://localhost:9696`, go to **Indexers → Add Indexer**, and add a few public indexers.
 
+The `Standard` sync profile requires at least **10 reported seeders** for automatic
+Sonarr/Radarr torrent grabs. Override `torrent_minimum_seeders` in your inventory
+to change this threshold. Service initialisation reapplies it on every run and
+requests an indexer sync; other sync profiles and quality rules are preserved.
+Indexer counts can be stale, so this filters low-seed releases but does not
+guarantee a working swarm. qBittorrent also excludes slow torrents from its queue
+limits so stalled downloads are less likely to block other work.
+
 ## Subtitles
 
 Bazarr downloads **English** subtitles automatically for everything Radarr and

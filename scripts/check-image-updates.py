@@ -157,7 +157,7 @@ def registry_tags(image: StackImage) -> list[str]:
 def registry_digest(image: StackImage) -> str:
     ref = f"{image.repository}:{image.current_tag}"
     proc = subprocess.run(
-        ["docker", "manifest", "inspect", "--verbose", ref],
+        ["docker", "buildx", "imagetools", "inspect", ref, "--format", "{{json .Manifest}}"],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -165,8 +165,7 @@ def registry_digest(image: StackImage) -> str:
         timeout=60,
     )
     payload = json.loads(proc.stdout)
-    descriptor = payload[0].get("Descriptor") if isinstance(payload, list) else payload.get("Descriptor")
-    digest = normalize_digest(descriptor.get("digest") if descriptor else None)
+    digest = normalize_digest(payload.get("digest"))
     if not digest:
         raise ValueError(f"registry manifest digest not found for {ref}")
     return digest

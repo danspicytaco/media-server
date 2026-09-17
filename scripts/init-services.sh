@@ -257,6 +257,44 @@ setup_prowlarr() {
   mark_done "prowlarr"
 }
 
+apply_prowlarr_sync_profile() {
+  python3 - "${INIT_DIR}/prowlarr.json" <<'PY'
+import json
+import os
+import sys
+import urllib.request
+
+with open(sys.argv[1]) as config:
+    desired = json.load(config)["syncProfile"]
+minimum = desired["minimumSeeders"]
+if type(minimum) is not int or minimum < 0:
+    raise ValueError("minimumSeeders must be a non-negative integer")
+
+base = f"http://127.0.0.1:{os.environ['PROWLARR_PORT']}/api/v1/"
+headers = {"X-Api-Key": os.environ["PROWLARR_API_KEY"], "Content-Type": "application/json"}
+
+def request(path, method="GET", payload=None):
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(base + path, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=30) as response:
+        body = response.read()
+        return json.loads(body) if body else None
+
+profiles = [p for p in request("appprofile") if p["name"] == desired["name"]]
+if len(profiles) != 1:
+    raise ValueError(f"Expected one Prowlarr sync profile named {desired['name']!r}")
+profile = profiles[0]
+path = f"appprofile/{profile['id']}"
+if profile["minimumSeeders"] != minimum:
+    profile["minimumSeeders"] = minimum
+    request(path, "PUT", profile)
+if request(path)["minimumSeeders"] != minimum:
+    raise RuntimeError("Prowlarr minimum seeders update did not persist")
+sync = request("command", "POST", {"name": "ApplicationIndexerSync", "forceSync": True})
+print(f"[init] Prowlarr {profile['name']} minimum seeders: {minimum}; app sync command {sync['id']}")
+PY
+}
+
 # --- Bazarr (subtitles) -------------------------------------------------------
 # Bazarr generates its own API key in config.yaml on first boot, so we boot it,
 # read the key back (same pattern as Jellyfin), persist it to .env, then push
@@ -572,6 +610,7 @@ main() {
   setup_radarr
   setup_sonarr
   setup_prowlarr
+  apply_prowlarr_sync_profile
   apply_quality_profiles "radarr" "http://127.0.0.1:${RADARR_PORT}" "${RADARR_API_KEY}" "${INIT_DIR}/radarr.json"
   apply_quality_profiles "sonarr" "http://127.0.0.1:${SONARR_PORT}" "${SONARR_API_KEY}" "${INIT_DIR}/sonarr.json"
   setup_bazarr
@@ -580,4 +619,6 @@ main() {
   log "All services initialised"
 }
 
-main "$@"
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
