@@ -42,7 +42,16 @@ class ImageComparison:
     registry_digest: str | None = None
 
 
+# Suffixed LinuxServer release tags, e.g. "12.1ubu2604-ls50". The base
+# version sorts correctly and these are often the only tags a major
+# release is published under.
+SUFFIXED_SEMVER_RE = re.compile(r"^(v?\d+(?:\.\d+){1,3})(?:[a-z][a-z0-9]*.*)?$")
+
+
 def parse_version(tag: str) -> tuple[int, ...]:
+    match = SUFFIXED_SEMVER_RE.match(tag)
+    if match:
+        tag = match.group(1)
     return tuple(int(part) for part in tag.lstrip("v").split("."))
 
 
@@ -86,11 +95,25 @@ def parse_stack_images(compose_template: Path, vars_file: Path) -> list[StackIma
 
 
 def latest_semver_tag(tags: Iterable[str], current_tag: str) -> str | None:
-    semver_tags = {tag for tag in tags if SEMVER_RE.match(tag)}
+    semver_tags = {tag for tag in tags if SUFFIXED_SEMVER_RE.match(tag)}
     if not semver_tags:
         return None
 
-    latest = max(semver_tags, key=parse_version)
+    # When the current pin is a bare semver tag, prefer another bare tag so a
+    # suffixed variant never wins by accident. When the current pin is
+    # suffixed (LinuxServer Jellyfin publishes 12.x only as suffixed tags),
+    # prefer the same suffix family so the comparison stays meaningful.
+    def bare(tag: str) -> bool:
+        match = SUFFIXED_SEMVER_RE.match(tag)
+        return match is not None and match.group(1) == tag.lstrip("v")
+
+    candidates = semver_tags
+    if bare(current_tag):
+        bare_tags = {tag for tag in semver_tags if bare(tag)}
+        if bare_tags:
+            candidates = bare_tags
+
+    latest = max(candidates, key=parse_version)
     if current_tag.startswith("v") and not latest.startswith("v"):
         prefixed = f"v{latest}"
         if prefixed in semver_tags:

@@ -204,6 +204,7 @@
         - prowlarr_api_key
         - radarr_api_key
         - sonarr_api_key
+      no_log: true
       tags:
         - always
 
@@ -218,6 +219,7 @@
       loop:
         - jellyfin_password
         - qbittorrent_password
+        - bazarr_password
       no_log: true
       tags:
         - always
@@ -557,6 +559,22 @@
       loop:
         - { src: compose.yaml.j2, dest: compose.yaml }
         - { src: config/traefik.yml.j2, dest: config/traefik/traefik.yml }
+        - { src: config/traefik/dynamic/media-services.yml.j2, dest: config/traefik/dynamic/media-services.yml }
+      tags:
+        - setup
+        - config
+
+    # Secret-bearing templates: qBittorrent config (password hash), *arr XML
+    # (API keys), and init JSON (API keys) contain credentials. Mode 0600,
+    # no logging, no diffs — same protections as the .env task below.
+    - name: Template credential-bearing configuration files
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ root_dir }}/{{ item.dest }}"
+        mode: "0600"
+        owner: "{{ ansible_facts.user_uid }}"
+        group: "{{ ansible_facts.user_gid }}"
+      loop:
         - { src: config/qbittorrent/qBittorrent.conf.j2, dest: torrent/config/qBittorrent/qBittorrent.conf }
         - { src: config/radarr.config.xml.j2, dest: media-management/radarr/config.xml }
         - { src: config/sonarr.config.xml.j2, dest: media-management/sonarr/config.xml }
@@ -566,6 +584,8 @@
         - { src: config/init/prowlarr.json.j2, dest: config/init/prowlarr.json }
         - { src: config/init/seerr.json.j2, dest: config/init/seerr.json }
         - { src: config/init/bazarr.json.j2, dest: config/init/bazarr.json }
+      diff: false
+      no_log: true
       tags:
         - setup
         - config

@@ -1,34 +1,17 @@
 services:
-  docker-socket-proxy:
-    image: tecnativa/docker-socket-proxy:{{ docker_socket_proxy_version }}@sha256:{{ docker_socket_proxy_digest }}
-    container_name: docker-socket-proxy
-    restart: unless-stopped
-    environment:
-      - CONTAINERS=1
-      - EVENTS=1
-      - INFO=1
-      - NETWORKS=1
-      - VERSION=1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - {{ socket_proxy_network }}
-
   traefik:
     image: traefik:{{ traefik_version }}@sha256:{{ traefik_digest }}
     container_name: traefik
     restart: unless-stopped
-    depends_on:
-      - docker-socket-proxy
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./config/traefik/letsencrypt:/letsencrypt
       - ./config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./config/traefik/dynamic:/etc/traefik/dynamic:ro
     networks:
       - {{ public_network }}
-      - {{ socket_proxy_network }}
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
@@ -254,13 +237,6 @@ services:
     networks:
       - {{ internal_network }}
       - {{ public_network }}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.${SERVER_DOMAIN}`)"
-      - "traefik.http.routers.jellyfin.entrypoints=websecure"
-      - "traefik.http.routers.jellyfin.tls.certresolver=myresolver"
-      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
-      - "traefik.http.services.jellyfin.loadbalancer.responseForwarding.flushInterval=100ms"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8096/health || exit 1"]
       interval: 30s
@@ -291,12 +267,6 @@ services:
         condition: service_healthy
       sonarr:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.seerr.rule=Host(`${SERVER_DOMAIN}`)"
-      - "traefik.http.routers.seerr.entrypoints=websecure"
-      - "traefik.http.routers.seerr.tls.certresolver=myresolver"
-      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5055/api/v1/status || exit 1"]
       interval: 30s
@@ -310,9 +280,6 @@ networks:
     driver: bridge
   {{ public_network }}:
     name: {{ public_network }}
-    driver: bridge
-  {{ socket_proxy_network }}:
-    name: {{ socket_proxy_network }}
     driver: bridge
 {% if vpn_enabled | default(false) | bool and ((vpn_type | default('wireguard') == 'openvpn' and (vpn_username | default('') != '' or vpn_password | default('') != '')) or (vpn_type | default('wireguard') == 'wireguard' and (vpn_wireguard_private_key | default('') != '' or vpn_wireguard_preshared_key | default('') != ''))) %}
 

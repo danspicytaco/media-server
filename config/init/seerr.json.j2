@@ -3,13 +3,15 @@
     "appLanguage": "en",
     "applicationTitle": {{ frontend_title | to_json }},
     "applicationUrl": {{ ("https://" ~ server_domain) | to_json }},
-    "trustProxy": true,
-    "csrfProtection": true,
     "hideAvailable": false,
     "partialRequestsEnabled": true,
     "localLogin": true,
     "newPlexLogin": false,
     "defaultPermissions": 32
+  },
+  "networkSettings": {
+    "trustProxy": true,
+    "csrfProtection": true
   },
   "jellyfinSettings": {
     "name": {{ jellyfin_server_name | to_json }},

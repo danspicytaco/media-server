@@ -1,0 +1,28 @@
+http:
+  routers:
+    jellyfin:
+      rule: "Host(`jellyfin.{{ server_domain }}`)"
+      entryPoints:
+        - websecure
+      service: jellyfin
+      tls:
+        certResolver: myresolver
+    seerr:
+      rule: "Host(`{{ server_domain }}`)"
+      entryPoints:
+        - websecure
+      service: seerr
+      tls:
+        certResolver: myresolver
+
+  services:
+    jellyfin:
+      loadBalancer:
+        servers:
+          - url: "http://jellyfin:8096"
+        responseForwarding:
+          flushInterval: 100ms
+    seerr:
+      loadBalancer:
+        servers:
+          - url: "http://seerr:5055"

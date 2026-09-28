@@ -333,6 +333,28 @@ setup_bazarr() {
 
   local hdr="X-API-KEY: ${bazarr_key}"
 
+  # 0. Enable form authentication. Bazarr 1.6.2+ is required: form auth on
+  #    <=1.6.1-beta.15 is bypassable on failed logins (GHSA-jcpg-cp8q-738f).
+  #    The API-key path used below keeps working with auth enabled.
+  log "Enabling Bazarr form authentication"
+  local auth_result
+  auth_result="$(curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
+    --data-urlencode "settings-auth-authentication_type=form" \
+    --data-urlencode "settings-auth-username=${BAZARR_USERNAME}" \
+    --data-urlencode "settings-auth-password=${BAZARR_PASSWORD}" \
+    2>&1 || true)"
+  log "Bazarr authentication enabled"
+
+  # Purge existing backup archives: they contain the cleartext API key, and
+  # an unauthenticated reader (or SSRF route) turning one into postprocessing
+  # command execution is the documented RCE chain. Bazarr regenerates them on
+  # a weekly schedule with auth now enabled, but stale pre-auth zips are purged
+  # here so none survive from the no-auth era.
+  if [[ -d "${ROOT_DIR}/media-management/bazarr/backup" ]]; then
+    find "${ROOT_DIR}/media-management/bazarr/backup" -name "*.zip" -delete
+    log "Purged existing Bazarr backup archives"
+  fi
+
   # 1. Sonarr + Radarr connections and enabled providers. The settings endpoint
   #    is form-encoded (settings-<section>-<key>); list fields are repeated.
   log "Configuring Bazarr connections + providers"
@@ -574,7 +596,17 @@ setup_seerr() {
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
     -d "$(jq -c '.applicationSettings' "${init_config}")")"
-  log "Main settings result: ${main_result}"
+  # The response body includes the global API key — never log it.
+  log "Main settings configured"
+
+  log "Configuring Seerr network settings"
+  local network_result
+  network_result="$(curl -s -X POST "${base}/api/v1/settings/network" \
+    -H "Content-Type: application/json" \
+    -H "Cookie: ${session_cookie}" \
+    -d "$(jq -c '.networkSettings' "${init_config}")")"
+  # Same response shape as main settings — never log it.
+  log "Network settings configured"
 
   log "Configuring Seerr Radarr server"
   local radarr_result
@@ -596,7 +628,8 @@ setup_seerr() {
   local init_result
   init_result="$(curl -s -X POST "${base}/api/v1/settings/initialize" \
     -H "Cookie: ${session_cookie}")"
-  log "Initialize result: ${init_result}"
+  # The response echoes the settings object including the API key — never log it.
+  log "Seerr initialized"
 
   mark_done "seerr"
   log "Seerr initialisation complete"

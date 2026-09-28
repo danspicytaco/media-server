@@ -74,6 +74,30 @@ def test_latest_semver_tag_prefers_current_prefix():
     assert module.latest_semver_tag(["5.2.1", "5.2.2", "latest"], current_tag="5.2.1") == "5.2.2"
 
 
+def test_latest_semver_tag_handles_suffixed_linuxserver_tags():
+    module = load_module()
+
+    # LinuxServer publishes Jellyfin 12.x only as suffixed tags.
+    tags = ["10.11.11", "10.11.11ubu2604-ls44", "12.0ubu2604-ls48", "12.1ubu2604-ls50", "latest"]
+    assert module.latest_semver_tag(tags, current_tag="12.1ubu2604-ls50") == "12.1ubu2604-ls50"
+    assert module.latest_semver_tag(tags, current_tag="12.0ubu2604-ls48") == "12.1ubu2604-ls50"
+
+
+def test_latest_semver_tag_prefers_bare_tags_when_current_is_bare():
+    module = load_module()
+
+    tags = ["1.6.0", "1.6.1", "1.6.2", "1.6.2-development"]
+    assert module.latest_semver_tag(tags, current_tag="1.6.0") == "1.6.2"
+
+
+def test_parse_version_compares_suffixed_tags():
+    module = load_module()
+
+    assert module.parse_version("12.1ubu2604-ls50") == (12, 1)
+    assert module.parse_version("12.1ubu2604-ls50") > module.parse_version("10.11.11")
+    assert module.parse_version("12.0ubu2604-ls48") < module.parse_version("12.1ubu2604-ls50")
+
+
 def test_compare_images_reports_updates_without_network():
     module = load_module()
     image = module.StackImage(

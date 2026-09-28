@@ -1,10 +1,9 @@
 ping: {}
 
 providers:
-  docker:
-    endpoint: "tcp://docker-socket-proxy:2375"
-    exposedByDefault: false
-    network: {{ public_network }}
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
 
 entryPoints:
   web:
