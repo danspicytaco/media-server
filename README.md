@@ -278,3 +278,19 @@ Traefik obtains TLS certificates via ACME. Ensure these hostnames resolve to you
 
 - `{{ server_domain }}` — Seerr
 - `jellyfin.{{ server_domain }}` — Jellyfin
+
+## Block storage volume (media library)
+
+`content/media` lives on a DigitalOcean block-storage volume (`media-volume`,
+50 GiB, ext4, syd1), attached to the Droplet and mounted via `/etc/fstab`
+(device `/dev/disk/by-id/scsi-0DO_Volume_media-volume`, `nofail`). The
+library is therefore decoupled from the Droplet's local disk: media growth
+never forces a Droplet resize, and the volume survives Droplet rebuilds and
+can be moved between Droplets. Expand the volume in the DO console when the
+library approaches ~40 GiB, then `growpart` + `resize2fs` on the host
+(online, no container downtime). Local disk now only holds the OS, Docker
+images, and app config.
+
+The DO monitoring agent (`do-agent`) is installed — CPU/memory/disk metrics
+are collected and visible in the DO console and via the metrics API, which
+feeds any future Droplet-resize decision.
