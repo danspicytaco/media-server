@@ -515,7 +515,28 @@ setup_seerr() {
   # Reload .env in case Jellyfin step appended JELLYFIN_API_KEY.
   load_env "${ROOT_DIR}/.env"
 
-  [[ -n "${JELLYFIN_API_KEY:-}" ]] || die "JELLYFIN_API_KEY is required for Seerr setup"
+  # Recover a missing JELLYFIN_API_KEY: the config-tag re-template of .env can
+  # render it empty (the playbook fact is only set during the init-tag run of
+  # setup_jellyfin), so authenticate and generate one the same way that step
+  # does instead of failing.
+  if [[ -z "${JELLYFIN_API_KEY:-}" ]]; then
+    log "JELLYFIN_API_KEY empty — regenerating via Jellyfin"
+    local jf_base="http://127.0.0.1:${JELLYFIN_PORT}"
+    local jf_token jf_auth_response jf_keys_response
+    jf_auth_response="$(curl -sf -X POST "${jf_base}/Users/AuthenticateByName" \
+      -H "Content-Type: application/json" \
+      -H "X-Emby-Authorization: MediaBrowser ***\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
+      -d "$(jq -cn --arg username "${JELLYFIN_USERNAME}" --arg password "${JELLYFIN_PASSWORD}" '{Username: $username, Pw: $password}')" \
+      2>/dev/null || true)"
+    jf_token="$(echo "${jf_auth_response}" | jq -r '.AccessToken // empty' || true)"
+    [[ -n "${jf_token}" ]] || die "Failed to obtain Jellyfin access token for API key recovery"
+    curl -sf -X POST "${jf_base}/Auth/Keys?app=Seerr" -H "X-Emby-Token: ${jf_token}" >/dev/null || true
+    jf_keys_response="$(curl -sf "${jf_base}/Auth/Keys" -H "X-Emby-Token: ${jf_token}" || true)"
+    JELLYFIN_API_KEY="$(echo "${jf_keys_response}" | jq -r '[.Items[] | select(.AppName == "Seerr")] | last.AccessToken // empty' || true)"
+    [[ -n "${JELLYFIN_API_KEY}" ]] || die "Failed to regenerate Jellyfin API key"
+    set_env_key JELLYFIN_API_KEY "${JELLYFIN_API_KEY}"
+    log "Jellyfin API key regenerated"
+  fi
 
   local base="http://127.0.0.1:${SEERR_PORT}"
   local settings_file="${ROOT_DIR}/seerr/settings.json"
