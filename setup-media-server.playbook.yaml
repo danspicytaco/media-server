@@ -367,6 +367,7 @@
       tags:
         - setup
         - directories
+        - config
 
     - name: Create VPN secrets directory
       file:
