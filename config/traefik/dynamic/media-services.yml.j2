@@ -14,6 +14,20 @@ http:
       service: seerr
       tls:
         certResolver: myresolver
+    # Permanent redirect: every plain-HTTP request goes to HTTPS.
+    web-to-websecure:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: noop@internal
+
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
 
   services:
     jellyfin:
