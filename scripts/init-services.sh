@@ -127,7 +127,7 @@ setup_jellyfin() {
   auth_payload="$(jq -cn --arg username "${JELLYFIN_USERNAME}" --arg password "${JELLYFIN_PASSWORD}" '{Username: $username, Pw: $password}')"
   auth_response="$(curl -sf -X POST "${base}/Users/AuthenticateByName" \
     -H "Content-Type: application/json" \
-    -H "X-Emby-Authorization: MediaBrowser Client=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
+    -H "X-Emby-Authorization: MediaBrowser App=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
     -d "${auth_payload}" 2>/dev/null || true)"
   token="$(echo "${auth_response}" | jq -r '.AccessToken // empty' || true)"
 
@@ -525,7 +525,7 @@ setup_seerr() {
     local jf_token jf_auth_response jf_keys_response
     jf_auth_response="$(curl -sf -X POST "${jf_base}/Users/AuthenticateByName" \
       -H "Content-Type: application/json" \
-      -H "X-Emby-Authorization: MediaBrowser ***\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
+      -H "X-Emby-Authorization: MediaBrowser App=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
       -d "$(jq -cn --arg username "${JELLYFIN_USERNAME}" --arg password "${JELLYFIN_PASSWORD}" '{Username: $username, Pw: $password}')" \
       2>/dev/null || true)"
     jf_token="$(echo "${jf_auth_response}" | jq -r '.AccessToken // empty' || true)"
