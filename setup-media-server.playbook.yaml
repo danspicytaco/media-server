@@ -354,6 +354,7 @@
         group: "{{ ansible_facts.user_gid }}"
       loop:
         - config/traefik/letsencrypt
+        - config/traefik/dynamic
         - config/init
         - scripts
         - jellyfin
