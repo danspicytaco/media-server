@@ -127,13 +127,13 @@ setup_jellyfin() {
   auth_payload="$(jq -cn --arg username "${JELLYFIN_USERNAME}" --arg password "${JELLYFIN_PASSWORD}" '{Username: $username, Pw: $password}')"
   auth_response="$(curl -sf -X POST "${base}/Users/AuthenticateByName" \
     -H "Content-Type: application/json" \
-    -H "X-Emby-Authorization: MediaBrowser App=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
+    -H "Authorization: MediaBrowser Client=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
     -d "${auth_payload}" 2>/dev/null || true)"
   token="$(echo "${auth_response}" | jq -r '.AccessToken // empty' || true)"
 
   [[ -n "${token}" ]] || die "Failed to obtain Jellyfin access token"
 
-  local auth_header="Authorization: MediaBrowser Token=${token}"
+  local auth_header="Authorization: MediaBrowser Token=\"${token}\""
 
   local existing_libs
   existing_libs="$(curl -sf "${base}/Library/VirtualFolders" -H "${auth_header}" || echo "[]")"
@@ -159,7 +159,7 @@ setup_jellyfin() {
     curl -sf -X POST "${base}/Auth/Keys?app=Seerr" \
       -H "${auth_header}" >/dev/null
     local keys_response
-    keys_response="$(curl -sf "${base}/Auth/Keys" -H "X-Emby-Token: ${token}" || true)"
+    keys_response="$(curl -sf "${base}/Auth/Keys" -H "Authorization: MediaBrowser Token=\"${token}\"" || true)"
     JELLYFIN_API_KEY="$(echo "${keys_response}" | jq -r '[.Items[] | select(.AppName == "Seerr")] | last.AccessToken // empty' || true)"
     [[ -n "${JELLYFIN_API_KEY}" ]] || die "Failed to generate Jellyfin API key"
     set_env_key JELLYFIN_API_KEY "${JELLYFIN_API_KEY}"
@@ -525,13 +525,13 @@ setup_seerr() {
     local jf_token jf_auth_response jf_keys_response
     jf_auth_response="$(curl -sf -X POST "${jf_base}/Users/AuthenticateByName" \
       -H "Content-Type: application/json" \
-      -H "X-Emby-Authorization: MediaBrowser App=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
+      -H "Authorization: MediaBrowser Client=\"init\", Device=\"init\", DeviceId=\"init-script\", Version=\"1.0.0\"" \
       -d "$(jq -cn --arg username "${JELLYFIN_USERNAME}" --arg password "${JELLYFIN_PASSWORD}" '{Username: $username, Pw: $password}')" \
       2>/dev/null || true)"
     jf_token="$(echo "${jf_auth_response}" | jq -r '.AccessToken // empty' || true)"
     [[ -n "${jf_token}" ]] || die "Failed to obtain Jellyfin access token for API key recovery"
-    curl -sf -X POST "${jf_base}/Auth/Keys?app=Seerr" -H "X-Emby-Token: ${jf_token}" >/dev/null || true
-    jf_keys_response="$(curl -sf "${jf_base}/Auth/Keys" -H "X-Emby-Token: ${jf_token}" || true)"
+    curl -sf -X POST "${jf_base}/Auth/Keys?app=Seerr" -H "Authorization: MediaBrowser Token=\"${jf_token}\"" >/dev/null || true
+    jf_keys_response="$(curl -sf "${jf_base}/Auth/Keys" -H "Authorization: MediaBrowser Token=\"${jf_token}\"" || true)"
     JELLYFIN_API_KEY="$(echo "${jf_keys_response}" | jq -r '[.Items[] | select(.AppName == "Seerr")] | last.AccessToken // empty' || true)"
     [[ -n "${JELLYFIN_API_KEY}" ]] || die "Failed to regenerate Jellyfin API key"
     set_env_key JELLYFIN_API_KEY "${JELLYFIN_API_KEY}"
