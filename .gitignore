@@ -3,3 +3,8 @@ inventory.ini
 config/.init-state
 .ansible
 .credentials/
+
+# OS/tooling noise
+.DS_Store
+__pycache__/
+*.pyc
