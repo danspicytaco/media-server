@@ -14,7 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
-SEMVER_RE = re.compile(r"^v?\d+(?:\.\d+){1,3}$")
+# Suffixed LinuxServer release tags, e.g. "12.1ubu2604-ls50". The base
+# version sorts correctly and these are often the only tags a major
+# release is published under.
+SUFFIXED_SEMVER_RE = re.compile(r"^(v?\d+(?:\.\d+){1,3})(?:[a-z][a-z0-9]*.*)?$")
 IMAGE_RE = re.compile(
     r"^\s{4}image:\s+(.+?):\s*\{\{\s*(\w+)\s*\}\}"
     r"(?:@sha256:\s*\{\{\s*(\w+)\s*\}\})?"
@@ -40,12 +43,6 @@ class ImageComparison:
     status: str
     error: str = ""
     registry_digest: str | None = None
-
-
-# Suffixed LinuxServer release tags, e.g. "12.1ubu2604-ls50". The base
-# version sorts correctly and these are often the only tags a major
-# release is published under.
-SUFFIXED_SEMVER_RE = re.compile(r"^(v?\d+(?:\.\d+){1,3})(?:[a-z][a-z0-9]*.*)?$")
 
 
 def parse_version(tag: str) -> tuple[int, ...]:

@@ -337,12 +337,11 @@ setup_bazarr() {
   #    <=1.6.1-beta.15 is bypassable on failed logins (GHSA-jcpg-cp8q-738f).
   #    The API-key path used below keeps working with auth enabled.
   log "Enabling Bazarr form authentication"
-  local auth_result
-  auth_result="$(curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
+  curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
     --data-urlencode "settings-auth-authentication_type=form" \
     --data-urlencode "settings-auth-username=${BAZARR_USERNAME}" \
     --data-urlencode "settings-auth-password=${BAZARR_PASSWORD}" \
-    2>&1 || true)"
+    >/dev/null 2>&1 || true
   log "Bazarr authentication enabled"
 
   # Purge existing backup archives: they contain the cleartext API key, and
@@ -358,8 +357,7 @@ setup_bazarr() {
   # 1. Sonarr + Radarr connections and enabled providers. The settings endpoint
   #    is form-encoded (settings-<section>-<key>); list fields are repeated.
   log "Configuring Bazarr connections + providers"
-  local conn_result
-  conn_result="$(curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
+  curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
     --data-urlencode "settings-general-use_sonarr=true" \
     --data-urlencode "settings-general-use_radarr=true" \
     --data-urlencode "settings-general-enabled_providers=$(jq -r '.enabledProviders[0]' "${config}")" \
@@ -374,21 +372,20 @@ setup_bazarr() {
     --data-urlencode "settings-radarr-base_url=$(jq -r '.radarr.base_url' "${config}")" \
     --data-urlencode "settings-radarr-ssl=$(jq -r '.radarr.ssl' "${config}")" \
     --data-urlencode "settings-radarr-apikey=${RADARR_API_KEY}" \
-    2>&1 || true)"
+    >/dev/null 2>&1 || true
   log "Connections configured"
 
   # 2. Enable English, create the English language profile, set it as the
   #    series + movie default. Profiles are one JSON-string field.
   log "Configuring Bazarr English language profile"
-  local prof_result
-  prof_result="$(curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
+  curl -s -X POST "${base}/api/system/settings" -H "${hdr}" \
     --data-urlencode "languages-enabled=$(jq -r '.languagesEnabled[0]' "${config}")" \
     --data-urlencode "languages-profiles=$(jq -c '[.languageProfile]' "${config}")" \
     --data-urlencode "settings-general-serie_default_enabled=true" \
     --data-urlencode "settings-general-serie_default_profile=$(jq -r '.languageProfile.profileId' "${config}")" \
     --data-urlencode "settings-general-movie_default_enabled=true" \
     --data-urlencode "settings-general-movie_default_profile=$(jq -r '.languageProfile.profileId' "${config}")" \
-    2>&1 || true)"
+    >/dev/null 2>&1 || true
   log "Profile configured"
 
   # 3. Kick an immediate library sync + missing-subtitle search so subtitles
@@ -601,55 +598,50 @@ setup_seerr() {
 
   log "Got Seerr session cookie"
 
-  # Step 3: Push full config via the API now that we have a valid session
+  # Step 3: Push full config via the API now that we have a valid session.
+  # Response bodies include the global API key — never capture or log them.
   log "Configuring Seerr Jellyfin settings"
-  local jellyfin_result
-  jellyfin_result="$(curl -s -X POST "${base}/api/v1/settings/jellyfin" \
+  curl -s -X POST "${base}/api/v1/settings/jellyfin" \
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
     -d "$(jq -c --arg key "${JELLYFIN_API_KEY}" \
-          '.jellyfinSettings | .apiKey = $key | .hostname //= "jellyfin"' "${init_config}")")"
+          '.jellyfinSettings | .apiKey = $key | .hostname //= "jellyfin"' "${init_config}")" \
+    >/dev/null
   log "Jellyfin settings configured"
 
   log "Configuring Seerr main settings"
-  local main_result
-  main_result="$(curl -s -X POST "${base}/api/v1/settings/main" \
+  curl -s -X POST "${base}/api/v1/settings/main" \
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
-    -d "$(jq -c '.applicationSettings' "${init_config}")")"
-  # The response body includes the global API key — never log it.
+    -d "$(jq -c '.applicationSettings' "${init_config}")" \
+    >/dev/null
   log "Main settings configured"
 
   log "Configuring Seerr network settings"
-  local network_result
-  network_result="$(curl -s -X POST "${base}/api/v1/settings/network" \
+  curl -s -X POST "${base}/api/v1/settings/network" \
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
-    -d "$(jq -c '.networkSettings' "${init_config}")")"
-  # Same response shape as main settings — never log it.
+    -d "$(jq -c '.networkSettings' "${init_config}")" \
+    >/dev/null
   log "Network settings configured"
 
   log "Configuring Seerr Radarr server"
-  local radarr_result
-  radarr_result="$(curl -s -X POST "${base}/api/v1/settings/radarr" \
+  curl -s -X POST "${base}/api/v1/settings/radarr" \
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
-    -d "$(jq -c '.radarrServer' "${init_config}")" || true)"
+    -d "$(jq -c '.radarrServer' "${init_config}")" >/dev/null || true
   log "Radarr settings configured"
 
   log "Configuring Seerr Sonarr server"
-  local sonarr_result
-  sonarr_result="$(curl -s -X POST "${base}/api/v1/settings/sonarr" \
+  curl -s -X POST "${base}/api/v1/settings/sonarr" \
     -H "Content-Type: application/json" \
     -H "Cookie: ${session_cookie}" \
-    -d "$(jq -c '.sonarrServer' "${init_config}")" || true)"
+    -d "$(jq -c '.sonarrServer' "${init_config}")" >/dev/null || true
   log "Sonarr settings configured"
 
   log "Marking Seerr as initialized"
-  local init_result
-  init_result="$(curl -s -X POST "${base}/api/v1/settings/initialize" \
-    -H "Cookie: ${session_cookie}")"
-  # The response echoes the settings object including the API key — never log it.
+  curl -s -X POST "${base}/api/v1/settings/initialize" \
+    -H "Cookie: ${session_cookie}" >/dev/null
   log "Seerr initialized"
 
   mark_done "seerr"
